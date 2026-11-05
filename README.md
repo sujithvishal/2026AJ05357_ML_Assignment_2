@@ -2,7 +2,8 @@
 
 **Course:** M.Tech AIML, BITS Pilani WILP  
 **BITS ID:** 2026aj05357  
-**Submission deadline:** 08-Nov-2026
+**GitHub:** [sujithvishal/2026AJ05357_ML_Assignment_2](https://github.com/sujithvishal/2026AJ05357_ML_Assignment_2)  
+**Live app:** [2026aj05357-ml-assignment-2.streamlit.app](https://2026aj05357-ml-assignment-2.streamlit.app/)
 
 > [!NOTE]
 > **Class balance handling: the dataset was NOT resampled.**
@@ -57,8 +58,8 @@ a binary target sourced from UCI.
 
 ## 3. GitHub Repository
 
-**GitHub repo link:** `<paste your GitHub repository URL here>`  
-**Live Streamlit app:** `<paste your Streamlit Community Cloud URL here>`
+**GitHub repo link:** [https://github.com/sujithvishal/2026AJ05357_ML_Assignment_2](https://github.com/sujithvishal/2026AJ05357_ML_Assignment_2)  
+**Live Streamlit app:** [https://2026aj05357-ml-assignment-2.streamlit.app/](https://2026aj05357-ml-assignment-2.streamlit.app/)
 
 The repository contains the complete source code (`app.py`, `train_models.py`,
 `ml2_assignment.ipynb`), `requirements.txt`, this README, the test data
@@ -181,6 +182,11 @@ streamlit run app.py
 Upload `test_data.csv` (or use the sidebar's download button to get it), then pick a
 model from the dropdown. To run the notebook, also `pip install ipykernel jupyter`.
 
+> **Version note:** the saved `.joblib` pipelines were created with `scikit-learn==1.6.1`,
+> which is pinned in `requirements.txt`. Loading them with a different scikit-learn version
+> can fail with an unpickling error. If you retrain with `train_models.py`, the models are
+> regenerated for whichever version you have installed.
+
 ## 7. Streamlit App
 
 The app never retrains: it loads the saved pipelines from `model/` and scores the
@@ -194,8 +200,23 @@ uploaded CSV.
 | Confusion matrix / classification report | Confusion matrix and ROC curve side by side, then the classification report |
 | Results of all models | **Leaderboard** tab: ranked table, one bar panel per metric, combined ROC curves and a best-model banner (F1, then MCC) |
 
+**Live app:** [https://2026aj05357-ml-assignment-2.streamlit.app/](https://2026aj05357-ml-assignment-2.streamlit.app/)
+
 ## 8. Streamlit Community Cloud Deployment
+
+The app is deployed on Streamlit Community Cloud from the `main` branch of this
+repository, with `app.py` as the entry point and **Python 3.11** selected under
+*Advanced settings*. `requirements.txt` pins `scikit-learn==1.6.1` so the cloud
+environment matches the version the models were saved with.
+
+To deploy your own copy:
 
 1. Push this folder to a GitHub repository (including `model/` and `test_data.csv`).
 2. On [streamlit.io/cloud](https://streamlit.io/cloud), choose **New app**.
-3. Select the repository, branch `main`, and main file `app.py`, then **Deploy**.
+3. Select the repository, branch `main` and main file `app.py`.
+4. Under *Advanced settings*, choose Python 3.11, then **Deploy**.
+
+## 9. BITS Virtual Lab Execution
+
+The assignment was executed on the BITS Virtual Lab; the screenshot is included in the
+submission PDF.

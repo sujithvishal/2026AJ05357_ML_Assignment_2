@@ -202,21 +202,7 @@ uploaded CSV.
 
 **Live app:** [https://2026aj05357-ml-assignment-2.streamlit.app/](https://2026aj05357-ml-assignment-2.streamlit.app/)
 
-## 8. Streamlit Community Cloud Deployment
-
-The app is deployed on Streamlit Community Cloud from the `main` branch of this
-repository, with `app.py` as the entry point and **Python 3.11** selected under
-*Advanced settings*. `requirements.txt` pins `scikit-learn==1.6.1` so the cloud
-environment matches the version the models were saved with.
-
-To deploy your own copy:
-
-1. Push this folder to a GitHub repository (including `model/` and `test_data.csv`).
-2. On [streamlit.io/cloud](https://streamlit.io/cloud), choose **New app**.
-3. Select the repository, branch `main` and main file `app.py`.
-4. Under *Advanced settings*, choose Python 3.11, then **Deploy**.
-
-## 9. BITS Virtual Lab Execution
+## 8. BITS Virtual Lab Execution
 
 The assignment was executed on the BITS Virtual Lab; the screenshot is included in the
 submission PDF.

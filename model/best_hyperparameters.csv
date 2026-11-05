@@ -1,0 +1,6 @@
+,Best hyperparameters
+Logistic Regression,"C=0.1, class_weight=None"
+Decision Tree,"class_weight=None, criterion=entropy, max_depth=4, min_samples_leaf=5"
+KNN,"n_neighbors=3, p=1, weights=uniform"
+Naive Bayes,"priors=None, var_smoothing=0.1"
+Support Vector Machine,"C=10, class_weight=balanced, gamma=0.01"

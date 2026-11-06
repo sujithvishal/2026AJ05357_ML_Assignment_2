@@ -94,6 +94,8 @@ def evaluate(y_true, y_pred, y_proba):
         "Recall": recall_score(y_true, y_pred),
         "F1": f1_score(y_true, y_pred),
         "MCC": matthews_corrcoef(y_true, y_pred),
+        # Malignant (0) is the costly class to miss, so its recall is tracked separately.
+        "Malignant Recall": recall_score(y_true, y_pred, pos_label=0),
     }
 
 
@@ -149,13 +151,19 @@ def main():
         print(f"✓ {name:<24} test F1 {metrics['F1']:.4f} | {params[name]}")
 
     results_df = pd.DataFrame(results).T
-    results_df.iloc[:, :7] = results_df.iloc[:, :7].astype(float).round(4)
+    score_cols = ["Accuracy", "AUC", "Precision", "Recall", "F1", "MCC", "Malignant Recall", "CV F1"]
+    results_df[score_cols] = results_df[score_cols].astype(float).round(4)
     results_df.to_csv(f"{MODEL_DIR}/comparison_table.csv")
     pd.DataFrame({"Best hyperparameters": params}).to_csv(f"{MODEL_DIR}/best_hyperparameters.csv")
     pd.DataFrame(balance_rows).set_index(["Model", "Weighting"]).round(4).to_csv(
         f"{MODEL_DIR}/class_balance_cv.csv")
-    print("\n", results_df[["Accuracy", "AUC", "Precision", "Recall", "F1", "MCC"]].to_string())
-    print(f"\nWinner by F1: {results_df['F1'].astype(float).idxmax()}")
+    print("\n", results_df[score_cols[:-1]].to_string())
+
+    # Winner: Malignant recall first (a missed malignant case is the costly error),
+    # then F1 and MCC as tie-breaks.
+    ranked = results_df.sort_values(by=["Malignant Recall", "F1", "MCC"], ascending=[False, False, False])
+    print("\nRanking (Malignant recall, then F1, then MCC):", " > ".join(ranked.index))
+    print(f"Winner: {ranked.index[0]}")
 
 
 if __name__ == "__main__":

@@ -29,7 +29,7 @@ FULL_DATA_CSV = HERE / "data" / "breast_cancer_wisconsin_full.csv"
 LABEL = "target"                         # 0 = Malignant, 1 = Benign (positive class)
 OUTCOMES = ["Malignant", "Benign"]
 INPUT_COLUMNS = [c for c in pd.read_csv(FULL_DATA_CSV, nrows=0).columns if c != LABEL]
-SCORE_NAMES = ["Accuracy", "AUC", "Precision", "Recall", "F1", "MCC"]
+SCORE_NAMES = ["Accuracy", "AUC", "Precision", "Recall", "F1", "MCC", "Malignant recall"]
 
 PIPELINE_FILES = {
     "Logistic Regression": "logistic_regression.joblib",
@@ -91,7 +91,8 @@ def fetch_tuned_params():
         return {}
 
 
-def six_scores(truth, predicted, probability):
+def all_scores(truth, predicted, probability):
+    """The six required metrics (Benign = positive class) plus Malignant recall."""
     return {
         "Accuracy": accuracy_score(truth, predicted),
         "AUC": roc_auc_score(truth, probability),
@@ -99,6 +100,8 @@ def six_scores(truth, predicted, probability):
         "Recall": recall_score(truth, predicted),
         "F1": f1_score(truth, predicted),
         "MCC": matthews_corrcoef(truth, predicted),
+        # Share of truly malignant biopsies that are caught: the costly error is missing one.
+        "Malignant recall": recall_score(truth, predicted, pos_label=0),
     }
 
 
@@ -179,7 +182,7 @@ outputs = {}
 for model_name, file_name in PIPELINE_FILES.items():
     pipe = fetch_pipeline(file_name)
     hard, soft = pipe.predict(features), pipe.predict_proba(features)[:, 1]
-    outputs[model_name] = {"pred": hard, "prob": soft, "scores": six_scores(truth, hard, soft)}
+    outputs[model_name] = {"pred": hard, "prob": soft, "scores": all_scores(truth, hard, soft)}
 
 board = pd.DataFrame([{"Model": m, **o["scores"]} for m, o in outputs.items()]).set_index("Model")
 board = board.reindex(columns=pd.Index(SCORE_NAMES))
@@ -227,8 +230,10 @@ with tab_inspect:
     if tuned:
         st.caption(f"Tuned settings: `{tuned}`")
 
-    for slot, key in zip(st.columns(6), SCORE_NAMES):
+    for slot, key in zip(st.columns(len(SCORE_NAMES)), SCORE_NAMES):
         slot.metric(key, f"{result['scores'][key]:.4f}", border=True)
+    st.caption("Recall, Precision and F1 treat Benign as the positive class (as the assignment table does). "
+               "**Malignant recall** is the share of malignant biopsies correctly caught.")
 
     cm_col, roc_col = st.columns(2)
     with cm_col:
@@ -270,11 +275,13 @@ with tab_inspect:
 
 # ---- Tab 3: leaderboard -------------------------------------------------------
 with tab_board:
-    ranked = board.sort_values(by=["F1", "MCC"], ascending=[False, False])
+    ranked = board.sort_values(by=["Malignant recall", "F1", "MCC"], ascending=[False, False, False])
     top = ranked.index[0]
     st.markdown(
-        f"""<div class="verdict"><b>Best on this file: {top}</b> — F1 {ranked.loc[top, 'F1']:.4f},
-        MCC {ranked.loc[top, 'MCC']:.4f}. Order: {' › '.join(ranked.index)} (F1, then MCC as tie-break).</div>""",
+        f"""<div class="verdict"><b>Best on this file: {top}</b> — Malignant recall
+        {ranked.loc[top, 'Malignant recall']:.4f}, F1 {ranked.loc[top, 'F1']:.4f}, MCC {ranked.loc[top, 'MCC']:.4f}.
+        Order: {' › '.join(ranked.index)}.<br>Ranked by <b>Malignant recall first</b> (missing a malignant case is the
+        costly error), then F1 and MCC as tie-breaks.</div>""",
         unsafe_allow_html=True,
     )
     st.write("")
@@ -282,7 +289,7 @@ with tab_board:
                  width="stretch")
 
     st.markdown("##### One panel per metric")
-    fig, panels = plt.subplots(1, 6, figsize=(17, 3.4), sharey=True)
+    fig, panels = plt.subplots(1, len(SCORE_NAMES), figsize=(19, 3.4), sharey=True)
     order = list(ranked.index)
     for ax, metric in zip(panels, SCORE_NAMES):
         vals = board.loc[order, metric]

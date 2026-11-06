@@ -9,7 +9,8 @@
 > **Class balance handling: the dataset was NOT resampled.**
 > - **Data:** no SMOTE, no over- or under-sampling. Train and test both keep the real ~63% Benign / ~37% Malignant ratio.
 > - **Training:** `class_weight='balanced'` (50/50 `priors` for Naive Bayes) is part of each model's hyperparameter grid, and 5-fold CV decides per model whether it helps. KNN has no weighting option.
-> - **Selection metric:** F1 of the positive class (Benign = 1), not accuracy.
+> - **Tuning metric:** F1 of the positive class (Benign = 1) inside cross-validation, not accuracy.
+> - **Final ranking:** **Malignant recall first** (missing a malignant case is the costly error), then F1 and MCC as tie-breaks.
 
 ## 1. Problem Statement
 
@@ -86,16 +87,30 @@ is scored on F1, MCC, AUC, Accuracy, Precision and Recall, and the best is refit
 
 All six metrics computed with `sklearn.metrics` on the untouched test split.
 
-| ML Model Name | Accuracy | AUC | Precision | Recall | F1 | MCC |
-|---|---|---|---|---|---|---|
-| Logistic Regression | **0.9737** | 0.9957 | 0.9726 | **0.9861** | **0.9793** | 0.9433 |
-| Decision Tree | 0.8772 | 0.9593 | 0.9531 | 0.8472 | 0.8971 | 0.7542 |
-| KNN | 0.9649 | 0.9714 | 0.9595 | **0.9861** | 0.9726 | 0.9245 |
-| Naive Bayes | 0.9474 | 0.9878 | 0.9459 | 0.9722 | 0.9589 | 0.8864 |
-| Support Vector Machine | **0.9737** | **0.9967** | **0.9859** | 0.9722 | 0.9790 | **0.9439** |
+| ML Model Name | Accuracy | AUC | Precision | Recall | F1 | MCC | Malignant recall |
+|---|---|---|---|---|---|---|---|
+| Logistic Regression | **0.9737** | 0.9957 | 0.9726 | **0.9861** | **0.9793** | 0.9433 | 0.9524 |
+| Decision Tree | 0.8772 | 0.9593 | 0.9531 | 0.8472 | 0.8971 | 0.7542 | 0.9286 |
+| KNN | 0.9649 | 0.9714 | 0.9595 | **0.9861** | 0.9726 | 0.9245 | 0.9286 |
+| Naive Bayes | 0.9474 | 0.9878 | 0.9459 | 0.9722 | 0.9589 | 0.8864 | 0.9048 |
+| Support Vector Machine | **0.9737** | **0.9967** | **0.9859** | 0.9722 | 0.9790 | **0.9439** | **0.9762** |
 
-*(Bold = best value per metric.)* With only 114 test rows, one patient is about 0.9
-accuracy points, so differences of a few thousandths are within noise.
+*(Bold = best value per metric.)* Precision, Recall and F1 treat **Benign (1)** as the positive
+class, as in the assignment's table. **Malignant recall** is the recall of the malignant class
+(sensitivity): the share of malignant biopsies that are caught. It is the priority metric,
+because a missed malignant case is the costly error. With only 114 test rows (42 malignant),
+one patient is about 0.9 accuracy points and 2.4 points of Malignant recall, so small
+differences are within noise.
+
+Malignant cases caught on the test set:
+
+| Model | Malignant caught | Malignant missed (called Benign) | Benign wrongly flagged Malignant |
+|---|---|---|---|
+| Support Vector Machine | 41 / 42 | 1 | 2 |
+| Logistic Regression | 40 / 42 | 2 | 1 |
+| KNN | 39 / 42 | 3 | 1 |
+| Decision Tree | 39 / 42 | 3 | 11 |
+| Naive Bayes | 38 / 42 | 4 | 2 |
 
 ### Should the dataset be balanced? (CV evidence, training data only)
 
@@ -122,26 +137,26 @@ Best configuration with vs without class weighting, 5-fold CV means:
 
 | Model | Tuned hyperparameters | Observation |
 |---|---|---|
-| **Logistic Regression** | `C=0.1`, `class_weight=None` | Best F1 (0.979), top recall (0.986, tied with KNN), accuracy 0.974, MCC 0.943, AUC 0.996. The tuned `C=0.1` means fairly strong regularisation, which suits the heavily collinear radius/perimeter/area features. The classes are close to linearly separable once scaled. Easiest to explain through its coefficients. |
+| **Logistic Regression** | `C=0.1`, `class_weight=None` | Best F1 (0.979), Benign recall 0.986 (tied with KNN), Malignant recall 0.952 (2 of 42 malignant missed), accuracy 0.974, MCC 0.943, AUC 0.996. The tuned `C=0.1` means fairly strong regularisation, which suits the heavily collinear radius/perimeter/area features. The classes are close to linearly separable once scaled. Easiest to explain through its coefficients. |
 | **Decision Tree** | `criterion='entropy'`, `max_depth=4`, `min_samples_leaf=5` | Clearly the weakest: accuracy 0.877, recall 0.847, F1 0.897, MCC 0.754. Axis-aligned splits approximate the smooth, oblique boundary between correlated size features poorly, and a single tree has high variance on 455 training rows. CV kept it shallow to limit overfitting. Its strength is readable rules. |
-| **KNN** | `n_neighbors=3`, `weights='uniform'`, `p=1` | Accuracy 0.965 and recall 0.986 (tied best), F1 0.973. Manhattan distance beat Euclidean in 30 dimensions. Its AUC (0.971) is lower than the others because a 3-neighbour vote only produces four distinct probability values, which limits ranking quality. Needs scaling, which the pipeline provides. |
+| **KNN** | `n_neighbors=3`, `weights='uniform'`, `p=1` | Accuracy 0.965 and Benign recall 0.986 (tied best), F1 0.973, but Malignant recall is only 0.929 (3 of 42 missed), below Logistic Regression and SVM. Manhattan distance beat Euclidean in 30 dimensions. Its AUC (0.971) is lower than the others because a 3-neighbour vote only produces four distinct probability values, which limits ranking quality. Needs scaling, which the pipeline provides. |
 | **Naive Bayes** | `var_smoothing=0.1`, `priors=None` | Accuracy 0.947, F1 0.959, MCC 0.886, yet AUC 0.988 is much better than its accuracy suggests: it ranks cases well while its probabilities are poorly calibrated. The independence assumption is clearly violated by the near-duplicate size features, which costs it threshold-based accuracy. |
-| **Support Vector Machine** | `C=10`, `gamma=0.01`, `class_weight='balanced'` | Best AUC (0.997), precision (0.986) and MCC (0.944); F1 (0.979) is 0.0003 below Logistic Regression, accuracy identical. The RBF kernel with a small `gamma` gives a smooth, near-linear boundary. |
-| **Overall winner** | **Logistic Regression** | First by F1 then MCC, ties for the highest recall (misses the fewest Benign cases), within 0.001 AUC of SVM. SVM is a virtual tie, and on 114 test rows the difference is not meaningful; LR is preferred for simplicity and interpretability. |
+| **Support Vector Machine** | `C=10`, `gamma=0.01`, `class_weight='balanced'` | Best **Malignant recall (0.976, only 1 of 42 malignant missed)**, best AUC (0.997), precision (0.986) and MCC (0.944); F1 (0.979) is 0.0003 below Logistic Regression, accuracy identical. The RBF kernel with a small `gamma` gives a smooth, near-linear boundary. |
+| **Overall winner** | **Support Vector Machine** | Ranked by Malignant recall first, then F1 and MCC. The SVM catches the most malignant cases (0.976, 1 of 42 missed), ahead of Logistic Regression (0.952, 2 missed), and also has the best AUC, precision and MCC; its F1 is 0.0003 below Logistic Regression. The gap to Logistic Regression is one patient, so the two are effectively tied on 114 test rows. Logistic Regression is the simpler, more explainable alternative. |
 
 ### Overall Ranking
 
-| Rank | Model | F1 | MCC | AUC | Accuracy | In short |
-|---|---|---|---|---|---|---|
-| 1 | **Logistic Regression** | **0.979** | 0.943 | 0.996 | 0.974 | Best F1, top recall, simplest and most explainable |
-| 2 | Support Vector Machine | 0.979 | **0.944** | **0.997** | 0.974 | Virtual tie: best AUC, precision and MCC |
-| 3 | KNN | 0.973 | 0.925 | 0.971 | 0.965 | Top recall, but coarse probabilities limit AUC |
-| 4 | Naive Bayes | 0.959 | 0.886 | 0.988 | 0.947 | Ranks well, but independence assumption costs accuracy |
-| 5 | Decision Tree | 0.897 | 0.754 | 0.959 | 0.877 | Interpretable, but clearly the weakest |
+| Rank | Model | Malignant recall | F1 | MCC | AUC | Accuracy | In short |
+|---|---|---|---|---|---|---|---|
+| 1 | **Support Vector Machine** | **0.976** | 0.979 | **0.944** | **0.997** | 0.974 | Catches the most malignant cases; best AUC, precision and MCC |
+| 2 | Logistic Regression | 0.952 | **0.979** | 0.943 | 0.996 | 0.974 | Near-tie: best F1, Benign recall 0.986 (tied with KNN), simplest to explain |
+| 3 | KNN | 0.929 | 0.973 | 0.925 | 0.971 | 0.965 | Benign recall 0.986, but misses 3 malignant cases; coarse probabilities |
+| 4 | Decision Tree | 0.929 | 0.897 | 0.754 | 0.959 | 0.877 | Interpretable, but misses 3 malignant cases and wrongly flags 11 benign ones |
+| 5 | Naive Bayes | 0.905 | 0.959 | 0.886 | 0.988 | 0.947 | Ranks well, but misses 4 malignant cases; independence assumption costs accuracy |
 
-*Ranked by F1, with MCC as tie-breaker.*
+*Ranked by Malignant recall, then F1, then MCC. KNN and Decision Tree tie on Malignant recall; KNN's higher F1 places it above.*
 
-> **Winner: Logistic Regression** (SVM is a near-tied co-winner).
+> **Winner: Support Vector Machine** (Logistic Regression is a near-tied co-winner). Recall on the malignant class is the priority metric because a missed malignant case is the costly error; F1 and MCC break ties.
 
 ## 5. Repository Structure
 
@@ -196,9 +211,9 @@ uploaded CSV.
 |---|---|
 | Dataset upload (CSV) | Sidebar "Upload my own CSV" option (or the bundled 114-row test sample / the full 569-row dataset), with column and label validation, plus a download button for `test_data.csv` |
 | Model selection dropdown | **Model inspector** tab: dropdown with all 5 models; the tuned hyperparameters of the chosen model are shown |
-| Evaluation metrics | Accuracy, AUC, Precision, Recall, F1 and MCC for the selected model |
+| Evaluation metrics | Accuracy, AUC, Precision, Recall, F1 and MCC for the selected model, plus Malignant recall |
 | Confusion matrix / classification report | Confusion matrix and ROC curve side by side, then the classification report |
-| Results of all models | **Leaderboard** tab: ranked table, one bar panel per metric, combined ROC curves and a best-model banner (F1, then MCC) |
+| Results of all models | **Leaderboard** tab: ranked table, one bar panel per metric, combined ROC curves and a best-model banner (Malignant recall first, then F1 and MCC) |
 
 **Live app:** [https://2026aj05357-ml-assignment-2.streamlit.app/](https://2026aj05357-ml-assignment-2.streamlit.app/)
 

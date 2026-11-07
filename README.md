@@ -1,7 +1,8 @@
 ## Breast Cancer Classification — Model Comparison (ML Assignment 2)
 
-**Course:** M.Tech AIML, BITS Pilani WILP  
-**BITS ID:** 2026aj05357  
+**Name:** V Sujith Vishal
+**Course:** M.Tech AIML, BITS Pilani WILP
+**BITS ID:** 2026aj05357
 **GitHub:** [sujithvishal/2026AJ05357_ML_Assignment_2](https://github.com/sujithvishal/2026AJ05357_ML_Assignment_2)  
 **Live app:** [2026aj05357-ml-assignment-2.streamlit.app](https://2026aj05357-ml-assignment-2.streamlit.app/)
 
@@ -219,5 +220,37 @@ uploaded CSV.
 
 ## 8. BITS Virtual Lab Execution
 
-The assignment was executed on the BITS Virtual Lab; the screenshot is included in the
-submission PDF.
+The assignment was executed on the BITS Virtual Lab; the screenshots are shown below and
+are also included in the submission PDF.
+
+### 8.1 Lab environment: training script in VS Code
+
+![BITS Virtual Lab: train_models.py open in VS Code](bitslab_images/bitslab_env.png)
+
+### 8.2 Dataset: Breast Cancer Wisconsin CSV loaded in the lab
+
+![Dataset: breast_cancer_wisconsin_full.csv](bitslab_images/dataset.png)
+
+### 8.3 Exploratory data analysis: feature distributions by diagnosis
+
+![EDA: feature histograms by diagnosis](bitslab_images/eda.png)
+
+### 8.4 Confusion matrices of all five models (notebook output)
+
+![Confusion matrices of the five models](bitslab_images/confusion_matrix.png)
+
+### 8.5 Streamlit app source and server start-up in the lab
+
+![Streamlit app.py and server running on port 8501](bitslab_images/streamlit_run.png)
+
+### 8.6 Streamlit app: dataset and notes tab
+
+![Tumour Triage Bench: dataset and class mix](bitslab_images/streamlit_app.png)
+
+### 8.7 Streamlit app: model inspector (metrics, confusion matrix and ROC curve)
+
+![Tumour Triage Bench: model metrics, confusion matrix and ROC curve](bitslab_images/model_metrics.png)
+
+### 8.8 Streamlit app: leaderboard (metric comparison and combined ROC curves)
+
+![Tumour Triage Bench: leaderboard comparison graph](bitslab_images/comparison_graph.png)

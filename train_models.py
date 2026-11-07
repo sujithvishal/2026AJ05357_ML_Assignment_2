@@ -54,7 +54,10 @@ def load_data(path=RAW_PATH):
 
 def make_split(df, feature_cols):
     X, y = df[feature_cols], df[TARGET_COL]
-    return train_test_split(X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y)
+    X_tr, X_te, y_tr, y_te = train_test_split(
+        X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y)
+    # Re-wrap so type checkers see DataFrame/Series (sklearn stubs say "list").
+    return pd.DataFrame(X_tr), pd.DataFrame(X_te), pd.Series(y_tr), pd.Series(y_te)
 
 
 def model_grids():
@@ -120,7 +123,8 @@ def main():
     results, params, balance_rows = {}, {}, []
     for name, (clf, grid) in model_grids().items():
         search = GridSearchCV(Pipeline([("preprocess", preprocessor), ("model", clf)]),
-                              grid, scoring=scoring, refit="f1", cv=cv, n_jobs=-1)
+                              grid, scoring=scoring, refit="f1", cv=cv,  # type: ignore[arg-type]
+                              n_jobs=-1)
         t0 = time.time()
         search.fit(X_train, y_train)
         pipe = search.best_estimator_
